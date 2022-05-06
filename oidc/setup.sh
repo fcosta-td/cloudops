@@ -80,13 +80,14 @@ kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/relea
 cmctl check api --namespace cert-manager --wait=2m
 kubectl apply --validate=false -f ../certmanager/certmanager.yaml
 kubectl apply -f ./amazon-eks-pod-identity-webhook-master/deploy/auth.yaml
-kubectl apply -f ./amazon-eks-pod-identity-webhook-master/deploy/deployment-base.yaml
-kubectl apply -f ./amazon-eks-pod-identity-webhook-master/deploy/mutatingwebhook.yaml
+kubectl apply -f ./amazon-eks-pod-identity-webhook-master/deploy/deployment.yaml
+kubectl apply -f ./amazon-eks-pod-identity-webhook-master/deploy/mutatingwebhook-ca-bundle.yaml
 kubectl apply -f ./amazon-eks-pod-identity-webhook-master/deploy/service.yaml
 
 SERVICE="iam"
 AWS_ACCOUNT_ID=$(awslocal sts get-caller-identity --query "Account" --output text)
-OIDC_PROVIDER=$ISSUER_HOSTPATH
+#OIDC_PROVIDER=$ISSUER_HOSTPATH
+OIDC_PROVIDER=0.0.0.0:4566
 ACK_K8S_NAMESPACE=ack-system
 ACK_K8S_SERVICE_ACCOUNT_NAME=ack-$SERVICE-controller
 
@@ -102,7 +103,6 @@ read -r -d '' TRUST_RELATIONSHIP <<EOF
       "Action": "sts:AssumeRoleWithWebIdentity",
       "Condition": {
         "StringEquals": {
-          "${OIDC_PROVIDER}:aud": "sts.amazonaws.com",
           "${OIDC_PROVIDER}:sub": "system:serviceaccount:${ACK_K8S_NAMESPACE}:${ACK_K8S_SERVICE_ACCOUNT_NAME}"
         }
       }
@@ -118,6 +118,9 @@ awslocal iam create-role --role-name "${ACK_CONTROLLER_IAM_ROLE}" --assume-role-
 ACK_CONTROLLER_IAM_ROLE_ARN=$(awslocal iam get-role --role-name=$ACK_CONTROLLER_IAM_ROLE --query Role.Arn --output text)
 awslocal iam create-policy --policy-name iam-controller --policy-document file://policy.json
 awslocal iam attach-role-policy --role-name "${ACK_CONTROLLER_IAM_ROLE}" --policy-arn "arn:aws:iam::000000000000:policy/iam-controller"
+
+THUMBPRINT=$(echo | openssl s_client -servername 0.0.0.0:4566 -showcerts -connect 0.0.0.0:4566 2>&- | tac | sed -n '/-----END CERTIFICATE-----/,/-----BEGIN CERTIFICATE-----/p; /-----BEGIN CERTIFICATE-----/q' | tac | openssl x509 -fingerprint -noout | sed 's/://g' | awk -F= '{print tolower($2)}')
+awslocal iam create-open-id-connect-provider --url https://0.0.0.0:4566 --client-id-list "sts.amazonaws.com" --thumbprint-list $THUMBPRINT
 
 
 helm upgrade --install iam-controller ../iam/chart \
