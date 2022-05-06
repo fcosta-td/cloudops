@@ -102,6 +102,7 @@ read -r -d '' TRUST_RELATIONSHIP <<EOF
       "Action": "sts:AssumeRoleWithWebIdentity",
       "Condition": {
         "StringEquals": {
+          "${OIDC_PROVIDER}:aud": "sts.amazonaws.com",
           "${OIDC_PROVIDER}:sub": "system:serviceaccount:${ACK_K8S_NAMESPACE}:${ACK_K8S_SERVICE_ACCOUNT_NAME}"
         }
       }
@@ -117,7 +118,6 @@ awslocal iam create-role --role-name "${ACK_CONTROLLER_IAM_ROLE}" --assume-role-
 ACK_CONTROLLER_IAM_ROLE_ARN=$(awslocal iam get-role --role-name=$ACK_CONTROLLER_IAM_ROLE --query Role.Arn --output text)
 awslocal iam create-policy --policy-name iam-controller --policy-document file://policy.json
 awslocal iam attach-role-policy --role-name "${ACK_CONTROLLER_IAM_ROLE}" --policy-arn "arn:aws:iam::000000000000:policy/iam-controller"
-
 
 
 helm upgrade --install iam-controller ../iam/chart \

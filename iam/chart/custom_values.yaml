@@ -9,4 +9,3 @@ serviceAccount:
   create: true
   annotations:
     eks.amazonaws.com/role-arn: arn:aws:iam::000000000000:role/ack-iam-controller
-    eks.amazonaws.com/audience: aud
