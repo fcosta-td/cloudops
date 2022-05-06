@@ -24,7 +24,7 @@ spec:
         - --namespace=default
         - --service-name=pod-identity-webhook
         - --annotation-prefix=eks.amazonaws.com
-        - --token-audience=aud
+        - --token-audience=sts.amazonaws.com
         - --logtostderr
         volumeMounts:
         - name: cert

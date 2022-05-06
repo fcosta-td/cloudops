@@ -68,7 +68,7 @@ nodes:
       extraArgs:
         service-account-key-file: /etc/kubernetes/pki/sa.pub
         service-account-signing-key-file: /etc/kubernetes/pki/sa.key
-        api-audiences: aud
+        api-audiences: sts.amazonaws.com
         service-account-issuer: https://0.0.0.0:4566/oidc
     controllerManager:
       extraArgs:
