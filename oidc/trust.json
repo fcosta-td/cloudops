@@ -1,0 +1,17 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::000000000000:oidc-provider/0.0.0.0:4566/oidc"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "0.0.0.0:4566/oidc:sub": "system:serviceaccount:ack-system:ack-iam-controller"
+        }
+      }
+    }
+  ]
+}

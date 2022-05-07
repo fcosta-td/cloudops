@@ -69,7 +69,7 @@ nodes:
         service-account-key-file: /etc/kubernetes/pki/sa.pub
         service-account-signing-key-file: /etc/kubernetes/pki/sa.key
         api-audiences: sts.amazonaws.com
-        service-account-issuer: https://0.0.0.0:4566/oidc
+        service-account-issuer: https://$(echo $ISSUER_HOSTPATH)
     controllerManager:
       extraArgs:
         service-account-private-key-file: /etc/kubernetes/pki/sa.key
@@ -78,7 +78,6 @@ EOF
 ## certmanager and webhook
 kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v1.7.0/cert-manager.yaml
 cmctl check api --namespace cert-manager --wait=2m
-kubectl apply --validate=false -f ../certmanager/certmanager.yaml
 kubectl apply -f ./amazon-eks-pod-identity-webhook-master/deploy/auth.yaml
 kubectl apply -f ./amazon-eks-pod-identity-webhook-master/deploy/deployment.yaml
 kubectl apply -f ./amazon-eks-pod-identity-webhook-master/deploy/mutatingwebhook-ca-bundle.yaml
@@ -86,8 +85,7 @@ kubectl apply -f ./amazon-eks-pod-identity-webhook-master/deploy/service.yaml
 
 SERVICE="iam"
 AWS_ACCOUNT_ID=$(awslocal sts get-caller-identity --query "Account" --output text)
-#OIDC_PROVIDER=$ISSUER_HOSTPATH
-OIDC_PROVIDER=0.0.0.0:4566
+OIDC_PROVIDER=$ISSUER_HOSTPATH
 ACK_K8S_NAMESPACE=ack-system
 ACK_K8S_SERVICE_ACCOUNT_NAME=ack-$SERVICE-controller
 
@@ -120,7 +118,7 @@ awslocal iam create-policy --policy-name iam-controller --policy-document file:/
 awslocal iam attach-role-policy --role-name "${ACK_CONTROLLER_IAM_ROLE}" --policy-arn "arn:aws:iam::000000000000:policy/iam-controller"
 
 THUMBPRINT=$(echo | openssl s_client -servername 0.0.0.0:4566 -showcerts -connect 0.0.0.0:4566 2>&- | tac | sed -n '/-----END CERTIFICATE-----/,/-----BEGIN CERTIFICATE-----/p; /-----BEGIN CERTIFICATE-----/q' | tac | openssl x509 -fingerprint -noout | sed 's/://g' | awk -F= '{print tolower($2)}')
-awslocal iam create-open-id-connect-provider --url https://0.0.0.0:4566 --client-id-list "sts.amazonaws.com" --thumbprint-list $THUMBPRINT
+awslocal iam create-open-id-connect-provider --url https://0.0.0.0:4566/oidc --client-id-list "sts.amazonaws.com" --thumbprint-list $(echo $THUMBPRINT)
 
 
 helm upgrade --install iam-controller ../iam/chart \
